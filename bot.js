@@ -1,4 +1,10 @@
+const http = require('http');
 
+// Cria um servidor para o Koyeb não desligar o bot
+http.createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('Bot Online');
+}).listen(8080); // Porta que o Koyeb vai monitorar
 const mineflayer = require('mineflayer');
 const pathfinder = require('mineflayer-pathfinder').pathfinder;
 const Movements = require('mineflayer-pathfinder').Movements;
