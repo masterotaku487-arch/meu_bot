@@ -1,7 +1,6 @@
 {
-  "name": "bot-minecraft-afk",
+  "name": "bot-minecraft",
   "version": "1.0.0",
-  "description": "Bot para farmar no BawMC",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
@@ -9,8 +8,5 @@
   "dependencies": {
     "mineflayer": "latest",
     "mineflayer-pathfinder": "latest"
-  },
-  "engines": {
-    "node": ">=18.0.0"
   }
 }
