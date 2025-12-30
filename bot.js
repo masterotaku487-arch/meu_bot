@@ -1,12 +1,14 @@
 const http = require('http');
+
+// Servidor obrigatório para o Koyeb não desligar o bot
 http.createServer((req, res) => {
-    res.writeHead(200);
-    res.end('Bot vivo!');
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('Bot vivo e operando 24/7');
 }).listen(8080);
+
 const mineflayer = require('mineflayer');
 const pathfinder = require('mineflayer-pathfinder').pathfinder;
-const Movements = require('mineflayer-pathfinder').Movements;
-const { GoalNear, GoalBlock } = require('mineflayer-pathfinder').goals;
+const { GoalBlock } = require('mineflayer-pathfinder').goals;
 const fs = require('fs');
 
 const CONFIG = {
@@ -30,7 +32,7 @@ function registrar(msg) {
     const timestamp = new Date().toLocaleTimeString();
     const pos = bot.entity ? `[${bot.entity.position.x.toFixed(0)}, ${bot.entity.position.y.toFixed(0)}, ${bot.entity.position.z.toFixed(0)}]` : '[Lobby]';
     const linha = `[${timestamp}] ${pos} ${msg}`;
-    fs.appendFileSync(LOG_FILE, linha + '\n');
+    if (fs.existsSync(LOG_FILE)) fs.appendFileSync(LOG_FILE, linha + '\n');
     console.log(linha);
 }
 
@@ -42,13 +44,11 @@ function falar(msg) {
     }
 }
 
-// === ESCUTA CHAT DO MINECRAFT (Comandos de Voz) ===
+// === ESCUTA CHAT DO MINECRAFT ===
 bot.on('chat', (username, message) => {
-    if (username === bot.username) return; // Ignora o próprio bot
-
+    if (username === bot.username) return;
     const msg = message.toLowerCase();
     
-    // Se o dono falar !moneyatual ou #moneyatual no Mine
     if ((msg === '#moneyatual' || msg === '!moneyatual') && username === DONO_PAGAMENTO.replace('.', '')) {
         falar(`Meu saldo atual é: ${saldoAtual}`);
     }
@@ -62,7 +62,7 @@ bot.on('spawn', () => {
         falar(`/logar ${SENHA}`);
         
         setTimeout(() => {
-            if (bot.entity.position.y < 0) {
+            if (bot.entity && bot.entity.position.y < 0) {
                 registrar("⚠️ No Limbo. Tentando logar...");
                 falar(`/logar ${SENHA}`);
             } else {
@@ -87,11 +87,13 @@ bot.on('spawn', () => {
                             falar('/afk');
                             registrar("💤 AFK ATIVADO.");
                             
+                            // Pulo Anti-AFK
                             setInterval(() => {
                                 bot.setControlState('jump', true);
                                 setTimeout(() => bot.setControlState('jump', false), 100);
                             }, 45000);
 
+                            // Checagem de saldo a cada 5 min
                             setInterval(() => { falar('/money'); }, 300000);
                         }, 6000);
                     }, 5000);
@@ -118,22 +120,16 @@ bot.on('messagestr', (message) => {
     }
 });
 
-// === ESCUTA O CEREBRO.PY (Terminal) ===
+// === ESCUTA O TERMINAL (instrucao.txt) ===
 setInterval(() => {
     if (fs.existsSync(ORDEM_FILE)) {
         let ordem = fs.readFileSync(ORDEM_FILE, 'utf8').trim();
         if (ordem) {
-            // Se você digitar #moneyatual no terminal do Termux
             if (ordem === '#moneyatual' || ordem === '!moneyatual') {
                 falar(`Meu saldo atual é: ${saldoAtual}`);
-                registrar(`📊 Relatando saldo: ${saldoAtual}`);
-            } 
-            // Comando normal de chat
-            else if (ordem.startsWith('#') || ordem.startsWith('!')) {
+            } else if (ordem.startsWith('#') || ordem.startsWith('!')) {
                 falar(ordem.slice(1));
-            } 
-            // Comando de barra
-            else if (ordem.startsWith('/')) {
+            } else if (ordem.startsWith('/')) {
                 falar(ordem);
             }
             fs.unlinkSync(ORDEM_FILE);
@@ -141,5 +137,18 @@ setInterval(() => {
     }
 }, 500);
 
+// === SISTEMA DE RECONEXÃO AUTOMÁTICA (KOYEB SAFE) ===
 bot.on('error', (err) => registrar(`❌ Erro: ${err.message}`));
-bot.on('end', () => registrar("🔴 Bot desconectado."));
+
+bot.on('end', () => {
+    registrar("🔴 Bot desconectado. Reiniciando processo em 15 segundos para evitar erro de porta...");
+    setTimeout(() => {
+        process.exit(1); // O Koyeb reiniciará o bot automaticamente
+    }, 15000);
+});
+
+// Impede que o bot morra por erros inesperados
+process.on('uncaughtException', (err) => {
+    registrar(`💥 Erro Crítico: ${err.message}`);
+    setTimeout(() => process.exit(1), 5000);
+});
