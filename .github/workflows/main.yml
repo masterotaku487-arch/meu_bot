@@ -1,20 +1,18 @@
 name: Bot Minecraft 24h
-
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main ]
   workflow_dispatch:
-
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Use Node.js
-        uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Instalar dependencias
+      - name: Install
         run: npm install mineflayer mineflayer-pathfinder
-      - name: Rodar o Bot
+      - name: Run
         run: node bot.js
