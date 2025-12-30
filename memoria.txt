@@ -1,0 +1,9 @@
+DONO: .R_R2086
+SERVIDOR: bawmc.net
+MODO: semi-anarquia
+STATUS: iniciando
+SENHA: anime30rr
+SPAWN: 7 -7 22
+REGISTRADO: true
+ULTIMA_ACAO: /registrar anime30rr anime30rr
+TIMESTAMP: 14:54:43
