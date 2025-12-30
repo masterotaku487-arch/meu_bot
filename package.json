@@ -1,9 +1,9 @@
 {
-  "name": "bot-minecraft",
+  "name": "meu-bot",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "bot2.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node bot2.js"
   },
   "dependencies": {
     "mineflayer": "latest",
