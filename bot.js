@@ -1,6 +1,6 @@
 const http = require('http');
 
-// Servidor obrigatório para o Koyeb não desligar o bot
+// Servidor para o Koyeb não desligar o bot
 http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
     res.end('Bot vivo e operando 24/7');
@@ -24,6 +24,11 @@ const ORDEM_FILE = 'instrucao.txt';
 const SENHA = "anime30rr";
 const DONO_PAGAMENTO = '.R_R2086'; // Nick do dono
 
+// Garante que o arquivo de log exista para evitar erro de escrita
+if (!fs.existsSync(LOG_FILE)) {
+    fs.writeFileSync(LOG_FILE, '--- Inicio do Log ---\n');
+}
+
 const bot = mineflayer.createBot(CONFIG);
 bot.loadPlugin(pathfinder);
 
@@ -31,9 +36,14 @@ let saldoAtual = "Aguardando checagem...";
 
 function registrar(msg) {
     const timestamp = new Date().toLocaleTimeString();
-    const pos = bot.entity ? `[${bot.entity.position.x.toFixed(0)}, ${bot.entity.position.y.toFixed(0)}, ${bot.entity.position.z.toFixed(0)}]` : '[Lobby]';
+    const pos = (bot.entity && bot.entity.position) ? `[${bot.entity.position.x.toFixed(0)}, ${bot.entity.position.y.toFixed(0)}, ${bot.entity.position.z.toFixed(0)}]` : '[Lobby]';
     const linha = `[${timestamp}] ${pos} ${msg}`;
-    fs.appendFileSync(LOG_FILE, linha + '\n');
+    
+    try {
+        fs.appendFileSync(LOG_FILE, linha + '\n');
+    } catch (e) {
+        console.log("Erro ao gravar log: " + e.message);
+    }
     console.log(linha);
 }
 
@@ -45,13 +55,10 @@ function falar(msg) {
     }
 }
 
-// === ESCUTA CHAT DO MINECRAFT (Comandos de Voz) ===
+// === ESCUTA CHAT DO MINECRAFT ===
 bot.on('chat', (username, message) => {
-    if (username === bot.username) return; // Ignora o próprio bot
-
+    if (username === bot.username) return;
     const msg = message.toLowerCase();
-    
-    // Se o dono falar !moneyatual ou #moneyatual no Mine
     if ((msg === '#moneyatual' || msg === '!moneyatual') && username === DONO_PAGAMENTO.replace('.', '')) {
         falar(`Meu saldo atual é: ${saldoAtual}`);
     }
@@ -65,7 +72,7 @@ bot.on('spawn', () => {
         falar(`/logar ${SENHA}`);
         
         setTimeout(() => {
-            if (bot.entity.position.y < 0) {
+            if (bot.entity && bot.entity.position.y < 0) {
                 registrar("⚠️ No Limbo. Tentando logar...");
                 falar(`/logar ${SENHA}`);
             } else {
@@ -121,22 +128,17 @@ bot.on('messagestr', (message) => {
     }
 });
 
-// === ESCUTA O CEREBRO.PY (Terminal) ===
+// === ESCUTA O TERMINAL (instrucao.txt) ===
 setInterval(() => {
     if (fs.existsSync(ORDEM_FILE)) {
         let ordem = fs.readFileSync(ORDEM_FILE, 'utf8').trim();
         if (ordem) {
-            // Se você digitar #moneyatual no terminal do Termux
             if (ordem === '#moneyatual' || ordem === '!moneyatual') {
                 falar(`Meu saldo atual é: ${saldoAtual}`);
                 registrar(`📊 Relatando saldo: ${saldoAtual}`);
-            } 
-            // Comando normal de chat
-            else if (ordem.startsWith('#') || ordem.startsWith('!')) {
+            } else if (ordem.startsWith('#') || ordem.startsWith('!')) {
                 falar(ordem.slice(1));
-            } 
-            // Comando de barra
-            else if (ordem.startsWith('/')) {
+            } else if (ordem.startsWith('/')) {
                 falar(ordem);
             }
             fs.unlinkSync(ORDEM_FILE);
@@ -144,11 +146,18 @@ setInterval(() => {
     }
 }, 500);
 
+// === TRATAMENTO DE ERROS E RECONEXÃO ===
 bot.on('error', (err) => registrar(`❌ Erro: ${err.message}`));
 
 bot.on('end', () => {
-    registrar("🔴 Bot desconectado. Reiniciando processo em 15 segundos para evitar erro de porta...");
+    registrar("🔴 Bot desconectado. Reiniciando processo em 15 segundos...");
     setTimeout(() => {
-        process.exit(1); // O Koyeb reiniciará o bot automaticamente
+        // Encerra com código 0 (sucesso) para o Koyeb não tratar como falha crítica
+        process.exit(0); 
     }, 15000);
+});
+
+process.on('uncaughtException', (err) => {
+    registrar(`💥 Erro Crítico: ${err.message}`);
+    setTimeout(() => process.exit(1), 5000);
 });
